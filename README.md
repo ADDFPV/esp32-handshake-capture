@@ -18,6 +18,16 @@ The developers are not responsible for any misuse, damage, or legal consequences
 
 ---
 
+##  Features & My Improvements
+
+This repository is a fork of the original project, a litle bit modified to fix critical bugs and add new management features.
+
+### 🌟 What I Improved & Fixed:
+* **SPIFFS Filename Limit Fix:** Resolved a critical bug where long SSIDs caused compilation/runtime crashes due to the SPIFFS 31-character filename limit. SSIDs are now safely truncated to 8 characters. (may be a bit annoying bcs you cant see the whole SSID in the .pcap file but still better than having a logic flaw in your code ig)
+* **Web Routing & Sanitization Fix:** Fixed a `404 File Not Found` error during download by adding proper leading slash (`/`) sanitization to URL parameters. (I have no idea why the original code doesnt have this)
+* **Naming Conflict Resolution:** Renamed the internal `Network` struct to `WifiNetwork` to prevent naming collisions with official ESP32 system libraries.
+* **New Feature: Web-Based File Management:** Implemented a brand new `/delete` endpoint and updated the web UI with a list that allows downloading and deleting `.pcap` files directly from your browser.
+
 ## Features
 
 - Captures WPA/WPA2 EAPOL 4-way handshakes
