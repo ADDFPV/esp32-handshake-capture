@@ -34,11 +34,11 @@ typedef struct {
   int ch;
   int rssi;
   String encryption;
-} Network;
+} WifiNetwork;
 
 // Global variables
-Network networks[20];
-Network target;
+WifiNetwork networks[20];
+WifiNetwork target;
 uint8_t* pcap_buffer = nullptr;
 size_t pcap_size = 0;
 bool handshake_captured = false;
@@ -48,7 +48,7 @@ bool with_deauth = false;
 bool is_capturing = false;
 
 WebServer server(80);
-const char* ap_ssid = "HandshakeCapture";
+const char* ap_ssid = "Mobile - hotspot";
 const char* ap_password = "capture123";
 
 void scanNetworks();
@@ -282,9 +282,15 @@ void stopCapture() {
 void saveHandshake() {
   // Create filename with timestamp
   String timestamp = String(millis() / 1000);
-  String filename = "/handshake_" + target.ssid + "_" + timestamp + ".pcap";
+
+  String shortSsid = target.ssid;
+  if (shortSsid.length() > 8) {
+    shortSsid = shortSsid.substring(0, 8);
+  }
+
+  String filename = "/hs_" + shortSsid + "_" + timestamp + ".pcap";
   filename.replace(" ", "_"); // Remove spaces from filename
-  
+
   File file = SPIFFS.open(filename, FILE_WRITE);
   if (!file) {
     Serial.println("Failed to create file");
@@ -401,6 +407,7 @@ void startWebServer() {
   server.on("/", handleRoot);
   server.on("/download", handleDownload);
   server.on("/list", handleListFiles);
+  server.on("/delete", handleDelete);
   server.begin();
 }
 
@@ -420,7 +427,14 @@ void handleListFiles() {
   
   while(file) {
     if(String(file.name()).endsWith(".pcap")) {
-      html += "<li><a href='/download?file=" + String(file.name()) + "'>" + String(file.name()) + "</a> (" + String(file.size()) + " bytes)</li>";
+      String fileNameStr = String(file.name());
+      
+      // file download link
+      html += "<li><a href='/download?file=" + fileNameStr + "'>" + fileNameStr + "</a> ";
+      html += "(" + String(file.size()) + " bytes) ";
+      
+      // Red thingy to delete the file
+      html += "[<a href='/delete?file=" + fileNameStr + "' style='color:red; text-decoration:none;'>Delete</a>]</li>";
     }
     file = root.openNextFile();
   }
@@ -436,6 +450,14 @@ void handleDownload() {
   }
   
   String filename = server.arg("file");
+
+  Serial.print("Web_request_to_download: ");
+  Serial.println(filename);
+
+  if (!filename.startsWith("/")) {
+    filename = "/" + filename;
+  }
+
   if(!SPIFFS.exists(filename)) {
     server.send(404, "text/plain", "File not found");
     return;
@@ -451,4 +473,27 @@ void handleDownload() {
   server.sendHeader("Content-Disposition", "attachment; filename=" + filename.substring(filename.lastIndexOf('/')+1));
   server.streamFile(file, "application/octet-stream");
   file.close();
+}
+
+void handleDelete() {
+  if(!server.hasArg("file")) {
+    server.send(400, "text/plain", "Missing file parameter");
+    return;
+  }
+  
+  String filename = server.arg("file");
+  
+  // Leading slash sanitization we handled during download
+  if (!filename.startsWith("/")) {
+    filename = "/" + filename;
+  }
+  
+  // SPIFFS.remove() deletes the file
+  if(SPIFFS.remove(filename)) {
+    // after deleting we get an affirmation and a link back to the file page
+    server.send(200, "text/html", "<h3>File was successfully deleted!</h3><p><a href='/list'>Back to file list</a></p>");
+    Serial.printf("The file %s was deleted via web.\n", filename.c_str());
+  } else {
+    server.send(500, "text/plain", "Error: File could not be deleted.");
+  }
 }
