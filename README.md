@@ -48,12 +48,33 @@ The developers are not responsible for any misuse, damage, or legal consequences
      ```
      https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
      ```
-2. Open Boards Manager and install "ESP32"
+2. Open Boards Manager and install "ESP32" (3.3.10 is recommended for this fork)
 3. Load `esp32-handshake-capture.ino`
 4. Select:
    - Board: ESP32 Dev Module
    - Port: Your correct COM/tty port
-5. Click "Upload"
+5. Requirements & Compilation Fix
+
+Before compiling the sketch in Arduino IDE, make sure you have the correct environment setup to avoid compilation errors.
+
+### 1. ESP32 Arduino Core Version
+This project is tested and optimized for the official **Espressif esp32**.
+* **Recommended Version:** v3.3.10
+* Older versions (like v2.x) might cause naming conflicts or lack support for specific 802.11 functions.
+
+### 2. Multiple Definition Fix (`platform.txt`)
+Due to duplicate symbol definitions between some internal Espressif Wi-Fi libraries, the compiler will likely fail with a `multiple definition of...` error. 
+
+To fix this, you need to add the `-Wl,-zmuldefs` linker flag:
+
+    1. Locate your ESP32 `platform.txt` file (usually found in `AppData/Local/Arduino15/packages/esp32/hardware/esp32/[version]/`).
+    2. Open `platform.txt` in a text editor of your choice.
+    3. Find the line starting with `compiler.c.elf.flags=` or `compiler.cpp.elf.flags=`.
+    4. Append ` -Wl,-zmuldefs` to the end of that line.
+    5. Save the file and restart Arduino IDE.
+6. Click "Upload"
+
+   
 
 ### Option 2: PlatformIO (VS Code)
 
